@@ -35,6 +35,7 @@ function LobbyContent() {
   const { address } = useAccount();
 
   const roomCode = searchParams.get("room") || "";
+  const resultsMode = searchParams.get("results") === "1";
 
   const [room, setRoom] = useState<Room | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
@@ -201,26 +202,31 @@ function LobbyContent() {
   // Players in a waiting lobby enter game when host starts.
   // Completed rooms stay on lobby to show final results.
   // --------------------------------------
- useEffect(() => {
-  try {
-    const savedProfile = localStorage.getItem("bpl_profile");
-    const profile = savedProfile ? JSON.parse(savedProfile) : null;
+  useEffect(() => {
+    try {
+      const savedProfile = localStorage.getItem("bpl_profile");
+      const profile = savedProfile ? JSON.parse(savedProfile) : null;
 
-    const currentPlayer = players.find(
-      (player) => player.username === profile?.username,
-    );
+      const currentPlayer = players.find(
+        (player) => player.username === profile?.username,
+      );
 
-    const playerHasFinished = (currentPlayer?.shots ?? 0) >= 5;
+      const playerHasFinished = (currentPlayer?.shots ?? 0) >= 5;
 
-    if (room?.status === "live" && players.length > 0 && !playerHasFinished) {
-      router.push(`/game?room=${roomCode}`);
+      if (
+        room?.status === "live" &&
+        players.length > 0 &&
+        !playerHasFinished &&
+        !resultsMode
+      ) {
+        router.push(`/game?room=${roomCode}`);
+      }
+    } catch {
+      if (room?.status === "live" && players.length > 0) {
+        router.push(`/game?room=${roomCode}`);
+      }
     }
-  } catch {
-    if (room?.status === "live" && players.length > 0) {
-      router.push(`/game?room=${roomCode}`);
-    }
-  }
-}, [room?.status, players, roomCode, router]);
+  }, [room?.status, players, roomCode, router, resultsMode]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 px-6 py-10 text-white">
@@ -293,16 +299,32 @@ function LobbyContent() {
           </div>
 
           {room?.status === "completed" && (
-            <div className="mt-6 rounded-3xl border border-green-500/20 bg-green-500/10 p-5">
+            <div className="mt-6 rounded-3xl border border-green-500/20 bg-green-500/10 p-6">
               <p className="text-sm font-bold uppercase tracking-widest text-green-300">
                 Match Completed
               </p>
 
-              <h2 className="mt-2 text-3xl font-black">
-                {winnerLabel === "Draw"
-                  ? "Final Result: Draw"
-                  : `Winner: ${winnerLabel}`}
+              <h2 className="mt-3 text-4xl font-black">
+                {room.winner_username === "Draw"
+                  ? "⚖️ Match Draw"
+                  : `🏆 ${room.winner_username}`}
               </h2>
+
+              <p className="mt-3 text-slate-300">
+                Final rankings have been locked. Balance updates and XP rewards
+                have been applied.
+              </p>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <Info title="Players" text={String(players.length)} />
+
+                <Info
+                  title="Finished"
+                  text={`${finishedPlayers.length}/${players.length}`}
+                />
+
+                <Info title="Winner" text={room.winner_username || "Pending"} />
+              </div>
             </div>
           )}
 
@@ -386,41 +408,54 @@ function LobbyContent() {
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <Link
-              href={`/join?room=${roomCode}`}
-              className="rounded-2xl border border-slate-700 px-6 py-4 text-center font-bold hover:bg-slate-800"
-            >
-              Invite Another Player
-            </Link>
+            {room?.status === "completed" ? (
+              <>
+                <Link
+                  href="/create"
+                  className="rounded-2xl border border-slate-700 px-6 py-4 text-center font-bold hover:bg-slate-800"
+                >
+                  Play Again
+                </Link>
 
-            {room?.status === "live" ? (
-              <Link
-                href={`/game?room=${roomCode}`}
-                className="rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500"
-              >
-                Continue Match
-              </Link>
-            ) : room?.status === "completed" ? (
-              <Link
-                href="/create"
-                className="rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500"
-              >
-                Create New Match
-              </Link>
+                <Link
+                  href="/leaderboard"
+                  className="rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500"
+                >
+                  View Leaderboard
+                </Link>
+              </>
             ) : (
-              <button
-                onClick={startMatch}
-                disabled={!isHost || players.length < 2 || starting}
-                className="rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-              >
-                {starting
-                  ? "Starting Match..."
-                  : players.length < 2
-                    ? "Need 2 Players"
-                    : isHost
-                      ? "Start Match"
-                      : "Waiting for Host"}
-              </button>
+              <>
+                <Link
+                  href={`/join?room=${roomCode}`}
+                  className="rounded-2xl border border-slate-700 px-6 py-4 text-center font-bold hover:bg-slate-800"
+                >
+                  Invite Another Player
+                </Link>
+
+                {room?.status === "live" ? (
+                  <Link
+                    href={`/game?room=${roomCode}`}
+                    className="rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500"
+                  >
+                    Continue Match
+                  </Link>
+                ) : (
+                  <button
+                    onClick={startMatch}
+                    disabled={!isHost || players.length < 2 || starting}
+                    className="rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                  >
+                    {starting
+                      ? "Starting Match..."
+                      : players.length < 2
+                        ? "Need 2 Players"
+                        : isHost
+                          ? "Start Match"
+                          : "Waiting for Host"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

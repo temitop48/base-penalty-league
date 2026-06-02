@@ -864,7 +864,7 @@ function GameContent() {
 
                 <button
                   onClick={() => {
-                    window.location.href = `/lobby?room=${room}`;
+                    window.location.href = `/lobby?room=${room}&results=1`;
                   }}
                   className="mt-5 w-full rounded-2xl bg-blue-600 px-6 py-4 text-center font-bold hover:bg-blue-500"
                 >
