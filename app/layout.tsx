@@ -5,10 +5,67 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://base-penalty-league.vercel.app"),
+
   title: "Base Penalty League",
-  description: "A 2D penalty shootout game built for Base.",
+
+  description:
+    "Multiplayer football penalty shootout game built on Base.",
+
+  openGraph: {
+    title: "Base Penalty League",
+
+    description:
+      "Create rooms, compete in penalty shootouts, earn XP, unlock leagues and climb the rankings.",
+
+    url: "https://base-penalty-league.vercel.app",
+
+    siteName: "Base Penalty League",
+
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Base Penalty League",
+      },
+    ],
+
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+
+    title: "Base Penalty League",
+
+    description:
+      "Multiplayer football penalty shootout game built on Base.",
+
+    images: ["/og-image.png"],
+  },
+
   other: {
     "base:app_id": "6a203fbe4fbf682eb25dc106",
+
+    "fc:frame": JSON.stringify({
+      version: "next",
+
+      imageUrl:
+        "https://base-penalty-league.vercel.app/og-image.png",
+
+      button: {
+        title: "Play Base Penalty League",
+
+        action: {
+          type: "launch_frame",
+
+          name: "Base Penalty League",
+
+          url: "https://base-penalty-league.vercel.app",
+        },
+      },
+    }),
   },
 };
 
