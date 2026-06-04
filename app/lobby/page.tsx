@@ -27,6 +27,7 @@ type Room = {
   winner_username: string | null;
   stake_tier: string | null;
   custom_stake: string | null;
+  balance_settled: boolean | null;
 };
 
 function LobbyContent() {
@@ -82,7 +83,7 @@ function LobbyContent() {
     const { data, error: roomError } = await supabase
       .from("rooms")
       .select(
-        "room_code, host_wallet, status, max_players, winner_username, stake_tier, custom_stake",
+        "room_code, host_wallet, status, max_players, winner_username, stake_tier, custom_stake, balance_settled",
       )
       .eq("room_code", roomCode)
       .single();
@@ -156,6 +157,64 @@ function LobbyContent() {
   // REALTIME LOBBY SYNC
   // Reloads players and room status whenever Supabase changes.
   // --------------------------------------
+  function getStakeAmount() {
+  const rawStake =
+    room?.stake_tier === "Custom"
+      ? room.custom_stake || "0"
+      : room?.stake_tier || "0";
+
+  const amount = Number(String(rawStake).replace(/[^0-9.]/g, ""));
+
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+async function settleMatchIfReady() {
+  if (!room || room.balance_settled) return;
+  if (players.length < 2) return;
+
+  const allFinished = players.every((player) => player.shots >= 5);
+  if (!allFinished) return;
+
+  const sortedPlayers = [...players].sort((a, b) => b.goals - a.goals);
+  const topScore = sortedPlayers[0]?.goals ?? 0;
+  const topPlayers = sortedPlayers.filter((player) => player.goals === topScore);
+
+  const winnerUsername =
+    topPlayers.length === 1 ? topPlayers[0].username : "Draw";
+
+  const stakeAmount = getStakeAmount();
+
+  if (winnerUsername !== "Draw" && stakeAmount > 0) {
+    const loserCount = players.length - 1;
+
+    for (const player of players) {
+      const isWinner = player.username === winnerUsername;
+
+      const balanceChange = isWinner
+        ? stakeAmount * loserCount
+        : -stakeAmount;
+
+      await supabase
+        .from("room_players")
+        .update({
+          game_balance: Math.max((player.game_balance ?? 200) + balanceChange, 0),
+        })
+        .eq("room_code", room.room_code)
+        .eq("username", player.username);
+    }
+  }
+
+  await supabase
+    .from("rooms")
+    .update({
+      status: "completed",
+      winner_username: winnerUsername,
+      balance_settled: true,
+    })
+    .eq("room_code", room.room_code);
+}
+
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRoom();
@@ -254,6 +313,12 @@ function LobbyContent() {
     // Ignore local sync failure.
   }
 }, [room?.status, players]);
+
+useEffect(() => {
+  settleMatchIfReady();
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [players, room?.status, room?.balance_settled]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 px-6 py-10 text-white">
