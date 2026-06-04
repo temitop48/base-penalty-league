@@ -7,6 +7,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Base Penalty League",
   description: "A 2D penalty shootout game built for Base.",
+  other: {
+    "base:app_id": "6a203fbe4fbf682eb25dc106",
+  },
 };
 
 function Navbar() {
