@@ -228,6 +228,33 @@ function LobbyContent() {
     }
   }, [room?.status, players, roomCode, router, resultsMode]);
 
+
+  useEffect(() => {
+  if (room?.status !== "completed") return;
+
+  try {
+    const savedProfile = localStorage.getItem("bpl_profile");
+    const profile = savedProfile ? JSON.parse(savedProfile) : null;
+
+    if (!profile?.username) return;
+
+    const currentPlayer = players.find(
+      (player) => player.username === profile.username,
+    );
+
+    if (!currentPlayer) return;
+
+    const updatedProfile = {
+      ...profile,
+      gameBalance: currentPlayer.game_balance ?? profile.gameBalance ?? 200,
+    };
+
+    localStorage.setItem("bpl_profile", JSON.stringify(updatedProfile));
+  } catch {
+    // Ignore local sync failure.
+  }
+}, [room?.status, players]);
+
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 px-6 py-10 text-white">
       <section className="relative mx-auto max-w-4xl">
